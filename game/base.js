@@ -445,13 +445,12 @@ function loadStuff(savegame) {
 		Object.assign(gameData, savegame)
 		backwardsCompatibility()
 		gameData.versionNumber = 190
-	} else
-		update("newInfo", "Save File Empty.")
+	}
 }
 
 function saveGame() {
 	if (ableToSave)
-		localStorage.setItem('mathAdventureSave', JSON.stringify(gameData))
+		localStorage.setItem('sublimesave', JSON.stringify(gameData))
 }
 
 function resetGame() {
@@ -459,7 +458,7 @@ function resetGame() {
 		ableToSave = false
 		gameData = {}
 		Object.assign(gameData, gameDataBase)
-		localStorage.setItem('mathAdventureSave', JSON.stringify(gameData))
+		localStorage.setItem('sublimesave', JSON.stringify(gameData))
 		location.reload()
 	}
 }
