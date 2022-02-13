@@ -1,376 +1,298 @@
-jsfiles = ['base', 'inventory', 'skills', 'delivery', 'forest', 'company', 'travel', 'brokers', 'tasks', 'science', 'bakery', 'field']
-bars = []
+saveData = {
+	worlds: [
+	]
+}
 
-function gameStart() {
-	
-	for (let i = 0; i < jsfiles.length; i++) {
-		id = eval(jsfiles[i] + 'js')
-		
-		if (exists(id.mainTab)) {
-			mainTabs.push(id.mainTab)
+items = {
+	limes: {
+		maxStackSize: 1
+	}
+}
+
+tileGrid = 17
+tileSize = Math.floor(window.innerHeight / (tileGrid - 2))
+isInAWorld = false
+
+
+if (JSON.parse(localStorage.getItem('sublimegridsave')) != null)
+	saveData = JSON.parse(localStorage.getItem('sublimegridsave'))
+
+refreshWorldsList()
+
+
+
+dimensions ('tileDiv', tileSize * (tileGrid + 2), tileSize * (tileGrid + 2))
+dimensions ('frame', tileSize * tileGrid, tileSize * tileGrid)
+
+
+document.getElementById('frame').style.left = tileSize + 'px'
+document.getElementById('frame').style.top = tileSize + 'px'
+
+document.getElementById('tileDiv').style.top = (tileSize * -2) + 'px'
+
+
+dimensions ('frameLeft', tileSize * 2, tileSize * (tileGrid + 2))
+dimensions ('frameBottom', tileSize * (tileGrid + 2), tileSize * 2)
+
+dimensions ('guiRight', (window.innerWidth - tileSize * (tileGrid - 2)) / 2 - 8, window.innerHeight)
+
+
+function dimensions (id, width, height) {
+	document.getElementById(id).style.height = height + 'px'
+	document.getElementById(id).style.width = width + 'px'
+}
+
+function gameLoop1000 () {
+	localStorage.setItem('sublimegridsave', JSON.stringify(saveData))
+	setTimeout(gameLoop1000, 1000)
+}
+
+function loadTileAesthetic () {
+	for (x = 1; x <= tileGrid; x++) {
+		for (y = 1; y <= tileGrid; y++) {
+			whichTile = 'x' + (x + gameData.playerCoords.x - Math.ceil(tileGrid / 2)) + 'y' + (y + gameData.playerCoords.y - Math.ceil(tileGrid / 2))
+			
+			if (gameData.tiles[whichTile] == undefined)
+				gameData.tiles[whichTile] = {}
+			
+			if (gameData.tiles[whichTile].layer0 == undefined)
+				gameData.tiles[whichTile].layer0 = 'grass'
+			
+			
+			if (gameData.tiles[whichTile].layer1 == undefined) {
+				if (randomNumber(5) == 1)
+					gameData.tiles[whichTile].layer1 = 'limetree'
+				else
+					gameData.tiles[whichTile].layer1 = 'empty'
+			}
+			
+			setImage ('layer0tile-x' + x + '-y' + y, 'tiles/' + gameData.tiles[whichTile].layer0)
+			setImage ('layer1tile-x' + x + '-y' + y, 'tiles/' + gameData.tiles[whichTile].layer1)
+			
+			
+			if (gameData.tiles[whichTile].layer1 == 'player')
+				document.getElementById('layer1tile-x' + x + '-y' + y).style.transform = 'rotate(' + gameData.playerRotation + 'deg)'
+
 		}
-		if (exists(id.variables)) {
-			for (let j = 0; j < id.variables.length; j++) {
-				baseVariables.push(id.variables[j])
+	}
+}
+
+function setImage (id, content) {
+	document.getElementById(id).src = 'assets/' + content + '.png'
+}
+
+function createNewWorld () {
+	saveData.worlds.push({
+		name: document.getElementById('newWorldNameInput').value,
+		playerCoords: {
+			x: 0,
+			y: 0
+		},
+		tiles: {
+		},
+		inventory:  {}
+	})
+	
+	thisWorldCreate = saveData.worlds.length - 1
+	
+	saveData.worlds[thisWorldCreate].tiles['x0y-2'] = {}
+	saveData.worlds[thisWorldCreate].tiles['x0y-2'].layer1 = 'well'
+	
+	saveData.worlds[thisWorldCreate].tiles['x0y0'] = {}
+	saveData.worlds[thisWorldCreate].tiles['x0y0'].layer1 = 'player'
+	
+	for (i = 1; i <= 5; i++) {
+		saveData.worlds[thisWorldCreate].inventory['slot' + i] = {}
+		saveData.worlds[thisWorldCreate].inventory['slot' + i].id = 'empty'
+		saveData.worlds[thisWorldCreate].inventory['slot' + i].amount = 0
+	}
+	
+	refreshWorldsList()
+}
+
+function loadWorld (id) {
+	setDate = Date.now()
+	for (i = 0; i < saveData.worlds.length; i++) {
+		if (saveData.worlds[i].name == id)
+			where = i
+	}
+	
+	
+	gameData = saveData.worlds[where]
+	
+	document.getElementById('startMenu').style.display = 'none'
+	document.getElementById('gameBody').style.display = 'inline-block'
+
+
+	for (layer = 0; layer <= 1; layer++) {
+		toAdd = ''
+		
+		for (y = tileGrid; y >= 1; y--) {
+			for (x = 1; x <= tileGrid; x++) {
+				toAdd += `<img id="layer` + layer + `tile-x` + x + `-y` + y + `" style="height:` + tileSize + `px;width:` + tileSize + `px;image-rendering: pixelated;"/>`
 			}
 		}
 		
-		if (exists(id.gameDataBase)) {
-			Object.assign (gameDataBase, id.gameDataBase)
-		}
+		document.getElementById('layer' + layer + 'Div').innerHTML += toAdd
+		
 	}
 	
-	for (let i = 0; i < baseVariables.length; i++) {	
-		id = baseVariables[i].id
-		gameDataBase[id] = 0
-		gameDataBase[id + 'ShowVariable'] = true
-		gameDataBase[id + 'UnlockedVariable'] = false
-	}
+	isInAWorld = true
+	console.log(setDate - Date.now())
+	loadTileAesthetic()
+}
 
-	gameDataBase.limes = 1
-	
-	for (let j = 0; j < bars.length; j++) {
-		document.getElementById(window[bars[j] + 'Bar'].where).innerHTML += `
-			<div class="skillProgress" id="` + bars[j] + `Progress">
-				<div class="skillBar" id="` + bars[j] + `Bar">0%</div>
-			</div>
+function refreshWorldsList () {
+	document.getElementById('worldsList').innerHTML = ''
+	for (i = 0; i < saveData.worlds.length; i++) {
+		document.getElementById('worldsList').innerHTML += `
+		<div style="background-color:#3C3C3C;width:300px;padding:5px;border: #000000 solid 10px;">
+			<p style="background-color:#BBBBBB;padding:5px">` + saveData.worlds[i].name + `</p>
+			<button style="background-color:#BBBBBB;" onClick="loadWorld('` + saveData.worlds[i].name + `')">Load This World</button>
+			<button style="background-color:#BBBBBB;" onClick="deleteWorld('` + saveData.worlds[i].name + `')">Delete This World</button>
+		</div>
 		`
+	}
+}
+
+function deleteWorld(id) {
+	for (i = 0; i < saveData.worlds.length; i++) {
+		if (saveData.worlds[i].name == id)
+			where = i
+	}
+	
+	saveData.worlds.splice(where,1)
+	refreshWorldsList()
+}
+
+canMove = true
+
+function movePlayer (id) {
 		
-		gameDataBase[bars[j] + 'Bar'] = 0
-	}
-	
-	onLoadTasks ()	
-	
-    loadStuff(JSON.parse(localStorage.getItem("sublimesave")))
-	secondsOffline = Math.floor((Date.now() - gameData.lastSaveTime) / 1000)
-	
-	
-	for (let i = 0; i < jsfiles.length; i++) {
-		id = eval(jsfiles[i] + 'js')
+	if (canMove) {
+		canMove = false
+		doMove = false
 		
-		if (exists(id.onLoad)) {
-			id.onLoad()
-		}
-	}
-
-	for (let j = 0; j < bars.length; j++) {
-		if (window[bars[j] + 'Bar'].runOnLoad && gameData[bars[j] + 'Bar'] > 0)
-			runBar(bars[j])
-	}
-
-    mainGameLoop()
-    mainGameLoopSlow()
-	updateValues()
-	
-	function mainGameLoop() {		
-		for (let i = 0; i < jsfiles.length; i++) {
-			id = eval(jsfiles[i] + 'js')
-			
-			if (exists(id.mainGameLoop)) {
-				id.mainGameLoop()
-			}
-		}
-		setTimeout(mainGameLoop, 50)
-	}
-
-	function mainGameLoopSlow() {
-		for (let i = 0; i < jsfiles.length; i++) {
-			id = eval(jsfiles[i] + 'js')
-			
-			if (exists(id.mainGameLoopSlow)) {
-				id.mainGameLoopSlow()
-			}
-		}
-		setTimeout(mainGameLoopSlow, 500)
-	}
-	
-	function updateValues() {
-		for (let i = 0; i < jsfiles.length; i++) {
-			id = eval(jsfiles[i] + 'js')
-			
-			if (exists(id.update)) {
-				id.update()
-			}
-		}
-
-		setTimeout(updateValues, 15)
-	}
-}
-
-function exists (id) {
-	return (typeof id !== 'undefined')
-}
-
-function runBar(id) {	
-	if (gameData[id + 'Bar'] < 100) {
-		gameData[id + 'Bar'] += window[id + 'Bar'].granularity()
-		setTimeout(runBar, 15 / gameData.tickspeed, id)
-	}
-	else {
-		gameData[id + 'Bar'] = 0
-		window[id + 'Bar'].end()
-	}
-	updateBar(id)
-}
-
-function updateBar(x) {
-    i = x + "Bar"
-    var elem = document.getElementById(i)
-	
-	if(gameData[i] > 100)
-		gameData[i] = 100
-	
-	if (eval(x + 'Bar.direction') == 'backward') {
-		if (gameData[i] == 0)
-			elem.style.width = '0%'
-		else
-			elem.style.width = (100 - gameData[i]) + "%"
-
-		elem.innerHTML = "" + (100 - Math.ceil(gameData[i])) + "%"
-	}
-	else {
-		elem.style.width = gameData[i] + "%"
-		elem.innerHTML = "" + Math.ceil(gameData[i]) + "%"
-	}
-}
-
-function hide(id) {
-	if (!gameData.showEverything)
-		document.getElementById(id).style.display = 'none'
-}
-
-function pin(x) {
-	if (gameData.pin == x && gameData.pin !== "none") {
-		gameData.pin = "none"
-	} else
-		gameData.pin = x
-	normalizeButtons()
-	pinButton()
-}
-
-function normalizeButtons() {
-	var x = document.getElementById("deliveryBar.startButton")
-	$(".juiceMarket").prepend(x)
-	x.style.width = "120px"
-	x.style.margin = "5px"
-
-	x = document.getElementById("autoCollectingButton")
-	$(".autoCollectingDiv").prepend(x)
-	x.style.width = "150px"
-	x.style.margin = "5px"
-}
-
-function pinButton() {
-	var x = document.getElementById(gameData.pin)
-	
-	if (x == undefined)
-		gameData.pin = 'none'
-
-	if (gameData.pin !== "none") {
-		$(".navigateButtons").append(x)
+		gameData.tiles['x' + gameData.playerCoords.x + 'y' + gameData.playerCoords.y].layer1 = 'empty'
 		
+		playerCoords = gameData.playerCoords
+		
+		if (id == 'a') {
+			if (gameData.tiles['x' + (gameData.playerCoords.x - 1) + 'y' + gameData.playerCoords.y].layer1 == 'empty') {
+				playerCoords.x -= 1
+				doMove = true
+			}
+			gameData.playerRotation = '180'
+			axis = 'x'
+			amount = -1
+		}
+		else if (id == 'd') {
+			if (gameData.tiles['x' + (gameData.playerCoords.x + 1) + 'y' + gameData.playerCoords.y].layer1 == 'empty') {
+				playerCoords.x += 1
+				doMove = true
+			}
+			gameData.playerRotation = '0'
+			axis = 'x'
+			amount = 1
+		}
+		else if (id == 'w') {
+			if ((gameData.tiles['x' + gameData.playerCoords.x + 'y' + (gameData.playerCoords.y + 1)].layer1 == 'empty')) {
+				playerCoords.y += 1
+				doMove = true
+			}
+			gameData.playerRotation = '270'
+			axis = 'y'
+			amount = 1
+		}
+		else if (id == 's') {
+			if (gameData.tiles['x' + gameData.playerCoords.x + 'y' + (gameData.playerCoords.y - 1)].layer1 == 'empty') {
+				playerCoords.y -= 1
+				doMove = true
+			}
+			gameData.playerRotation = '90'
+			axis = 'y'
+			amount = -1
+		}
+		
+		gameData.tiles['x' + gameData.playerCoords.x + 'y' + gameData.playerCoords.y].layer1 = 'player'
+		
+		if (axis == 'y')
+			gameData.playerCoordsLooking = 'x' + gameData.playerCoords.x + 'y' + (gameData.playerCoords.y + amount)
+		else if (axis == 'x')
+			gameData.playerCoordsLooking = 'x' + (gameData.playerCoords.x + amount) + 'y' + gameData.playerCoords.y
 
-		x.style.width = "120px"
-		x.style.margin = "0px"
-		x.style.padding = "0px"
+		moveFrame(0, amount, axis)
 	}
 }
 
-function pickCurrentTask(x) {
-	taskOne = gameData.currentTask
-	taskTwo = gameData.currentTask2
 
-	if (!event.shiftKey && gameData.toggleActions) {
-
-		if (gameData.ambidextrousSkillLevel == gameData.ambidextrousSkillLevelMax) {
-			if (taskOne == x && taskOne !== "none" && taskTwo !== x)
-				gameData.currentTask = "none"
-			else if (taskOne == "none" && taskTwo !== x) {
-				if (!((taskTwo == 'makeJuice' && x == 'makeMaxJuice') || (taskTwo == 'makeMaxJuice' && x == 'makeJuice') || (taskTwo == 'usePeelers' && x == 'useMaxPeelers') || (taskTwo == 'useMaxPeelers' && x == 'usePeelers')))
-					gameData.currentTask = x
-			} else if (taskTwo == x && taskTwo !== "none")
-				gameData.currentTask2 = "none"
-			else if (taskTwo == "none") {
-				if (!((taskOne == 'makeJuice' && x == 'makeMaxJuice') || (taskOne == 'makeMaxJuice' && x == 'makeJuice') || (taskOne == 'usePeelers' && x == 'useMaxPeelers') || (taskOne == 'useMaxPeelers' && x == 'usePeelers')))
-					gameData.currentTask2 = x
-			}
-		} 
-		else {
-			if (taskOne == x && taskOne !== "none")
-				gameData.currentTask = "none"
+function moveFrame (displacement, amountMove, axisMove) {
+	if (displacement <= tileSize && doMove) {
+		if (axisMove == 'x') {
+			if (amountMove == -1)
+				document.getElementById('frame').style.left = (tileSize + displacement) + 'px'
 			else
-				gameData.currentTask = x
+				document.getElementById('frame').style.left = (tileSize - displacement) + 'px'
 		}
-	} 
-	else
-		startCurrentTask(x)
-}
+		else {
+			if (amountMove == 1)
+				document.getElementById('frame').style.top = (tileSize + displacement) + 'px'
+			else
+				document.getElementById('frame').style.top = (tileSize - displacement) + 'px'
+		}
 
-function pickCurrentSkill(x) {
-	if (gameData.toggleActions && !event.shiftKey && gameData.multitasking) {
-		if (gameData.currentSkill == x && gameData.currentSkill !== "none")
-			gameData.currentSkill = "none"
-		else
-			gameData.currentSkill = x
-	} else
-		tryToStartSkill(x, true)
-}
 
-function startCurrentTask(x) {
-	if(x !== 'none')
-		eval(x + '()')
-}
-
-function toggle(x) {
-	if (gameData[x] == 0)
-		gameData[x] = 1
-	else
-		gameData[x] = 0
-}
-
-function basicBuy(id, price) {
-	if (gameData.coins >= price) {
-		gameData.coins -= price
-		gameData[id] += 1
+		displacement += 1
+		setTimeout(moveFrame, 0, displacement, amount, axisMove)
 	}
-}
-
-function universalBuy(id, price, currency) {
-	if (gameData[currency] >= price) {
-		gameData[currency] -= price
-		gameData[id] += 1
-	}
-}
-
-function bulkableBuyMax(x, price) {
-	max = gameData[x + 'Max']
-	if (gameData[x + 'BulkToggle'] == 0)
-		amount = 1
 	else {
-		if (gameData.bulkBuyUnlock2)
-			amount = 100
-		else
-			amount = 10
-	}
-	if (gameData.coins >= price * amount) {
-		if (gameData[x] <= max - amount) {
-			gameData.coins -= price * amount
-			gameData[x] += amount
-		} else {
-			gameData.coins -= price * (max - gameData[x])
-			gameData[x] = max
-		}
+		loadTileAesthetic()
+		document.getElementById('frame').style.left = tileSize + 'px'
+		document.getElementById('frame').style.top = tileSize + 'px'
+		canMove = true
 	}
 }
 
-// returns a random integer from 1 to X
-function beckyRandom(max) {
-	return Math.floor(Math.random() * max) + 1;
+function myKeyPress(e) {
+	keyPressed = (String.fromCharCode(e.which))
+ 
+	if (isInAWorld) {
+		if (keyPressed == 'w' || keyPressed == 'a' || keyPressed == 's' || keyPressed == 'd')
+			movePlayer (keyPressed)
+		else if (e.which == 13) //Enter key
+			interact()
+		
+	}
+
 }
 
-// returns a random integer from X to Y
-function beckyRandomMinMax(min, max) {
-	return Math.floor(Math.random() * (max - min)) + min;
+function randomNumber (max) {
+	return Math.floor(Math.random() * max) + 1
+}
+
+function interact () {
+	if (gameData.tiles[gameData.playerCoordsLooking].layer1 == 'well')
+		update('textBox', 'Welcome to the Lime Forest!')
+	else if (gameData.tiles[gameData.playerCoordsLooking].layer1 == 'limetree') {
+		gameData.tiles[gameData.playerCoordsLooking].layer1 = 'emptylimetree'
+		addItem('limes')
+	}
 }
 
 hasUpdatedObj = {}
 
 function update(id, content) {
-	stringy = id.replace(/[()-]/g, 'uwu')
-
-	if (typeof hasUpdatedObj[stringy] == undefined)
-		hasUpdatedObj[stringy] = 'noneOwO'
+	objContent = id.replace(/[()-]/g, 'uwu')
 	
-	if (hasUpdatedObj[stringy] != content) {
+	if (hasUpdatedObj[objContent] != content) {
 		document.getElementById(id).innerHTML = content
-		hasUpdatedObj[stringy] = content
+		hasUpdatedObj[objContent] = content
 	}
 }
 
-function currencyDisplay(id) {
-	variable = baseVariables[id].id + 'ShowVariable'
-	if (gameData[variable])
-		gameData[variable] = false
-	else
-		gameData[variable] = true
-}
-
-function upperFirstChar(string) {
-	return string.charAt(0).toUpperCase() + string.slice(1);
-}
-
-function colorChanger(id, content) {
-	document.getElementById(id).style.backgroundColor = content
-}
-
-function checkColor (x, id, colorTrue, colorFalse) {
-	if (x)
-		colorChanger(id, colorTrue)
-	else
-		colorChanger(id, colorFalse)
-	
-}
-
-function decreaseValue(id) {
-	if (gameData[id] >= 1)
-		gameData[id] -= 1
-}
-
-function checkShow (x, id, style) {
-	thing = document.getElementById(id).style
-	
-	if (style == 'visible') {
-		if (x) {
-			thing.visibility = 'visible'
-		}
-		else
-			thing.visibility = 'hidden'
+function addItem (id) {
+	for (i = 1; i <= 5; i++) {
+		if (gameData.inventory['slot' + i].id == 'empty')
+			gameData.inventory['slot' + i].id = id
 	}
-	else {
-		if (x) {
-			if (style == 'inline')
-				thing.display = 'inline-block'
-			else
-				thing.display = 'block'
-		}
-		else
-			hide(id)
-	}
-}
-
-function basicToggle(input) {
-	x = document.getElementsByClassName(input)
-
-	if (gameData[input + 'Toggle']) {
-		color = "#4DFE89"
-		display = 'block'
-	} else {
-		color = "gray"
-		display = 'none'
-	}
-	
-	colorChanger(input + "Button", color)
-	for (i = 0; i < x.length; i++) {
-		x[i].style.display = display
-	}
-}
-
-function currentTaskAesthetic(x) {
-	if (gameData.currentTask == x || gameData.currentTask2 == x)
-		colorChanger(x + "Button", "#C67848")
-	else
-		colorChanger(x + "Button", "#DEAD85")
-}
-
-function toggleAesthetic(input) {
-	checkColor(gameData[input] == 1, input + 'Button', '#4DFE89', 'gray')
-}
-
-function tabManager(id, color) {
-	hide(id)
-
-	if (color == undefined)
-		color = '#BBBBBB'
-
-	colorChanger(id + "Button", color)
 }
